@@ -14,7 +14,7 @@ namespace TemboRL
         {
             return new Guid().ToString();
         }
-        public static void Assert(bool condition, string message="Condition not true")
+        public static void Assert(bool condition, string message = "Condition not true")
         {
             if (!condition)
             {
@@ -24,13 +24,13 @@ namespace TemboRL
         public static double[] ArrayOfZeros(this int size)
         {
             var array = new double[size];
-            for(var i = 0; i < size; i++)
+            for (var i = 0; i < size; i++)
             {
                 array[i] = 0.0f;
             }
             return array;
         }
-        public static double[] ArrayOfZeros(this double[]array)
+        public static double[] ArrayOfZeros(this double[] array)
         {
             for (var i = 0; i < array.Length; i++)
             {
@@ -64,14 +64,14 @@ namespace TemboRL
         {
             return Math.Floor(Random() * (b - a) + a);
         }
-        public static double RandN(double mu,double std)
+        public static double RandN(double mu, double std)
         {
             return mu + GaussRandom() * std;
         }
         private static double Random(double minimum = 0, double maximum = 1)
         {
             Random random = new Random();
-            double nextDouble =random.NextDouble();
+            double nextDouble = random.NextDouble();
             return nextDouble * (maximum - minimum) + minimum;
         }
 
@@ -141,9 +141,9 @@ namespace TemboRL
             return output;
         }
 
-        public static bool Contains(this List<Model>collection, Model m)
+        public static bool Contains(this List<Model> collection, Model m)
         {
-            foreach(var model in collection)
+            foreach (var model in collection)
             {
                 if (model.Key == m.Key)
                 {
@@ -206,7 +206,7 @@ namespace TemboRL
             return models;
         }
 
-        public static ForwardLSTModel ForwardLSTM(Graph G,List<Model>models, int[]hiddenSizes,Matrix x, ForwardLSTModel prev)
+        public static ForwardLSTModel ForwardLSTM(Graph G, List<Model> models, int[] hiddenSizes, Matrix x, ForwardLSTModel prev)
         {
             var hidden_prevs = new List<Matrix>();
             var cell_prevs = new List<Matrix>();
@@ -216,11 +216,11 @@ namespace TemboRL
             // x is 1D column vector with observation
             // prev is a struct containing hidden and cell
             // from previous iteration
-            if (prev == null || prev.H==null)
+            if (prev == null || prev.H == null)
             {
                 for (var d = 0; d < hiddenSizes.Length; d++)
                 {
-                    hidden_prevs.Add(new Matrix(hiddenSizes[d],1));
+                    hidden_prevs.Add(new Matrix(hiddenSizes[d], 1));
                     cell_prevs.Add(new Matrix(hiddenSizes[d], 1));
                 }
             }
@@ -232,6 +232,7 @@ namespace TemboRL
 
             var hidden = new List<Matrix>();
             var cell = new List<Matrix>();
+            //todo when key is null?
             for (var d = 0; d < hiddenSizes.Length; d++)
             {
                 var input_vector = d == 0 ? x : hidden[d - 1];
@@ -285,6 +286,64 @@ namespace TemboRL
                 O = output
             };
             return ouu;
+        }
+
+        public static int Maxi(double[] w)
+        {
+            // argmax of array w
+            var maxv = w[0];
+            var maxix = 0;
+            for (var i = 1, n = w.Length; i < n; i++)
+            {
+                var v = w[i];
+                if (v > maxv)
+                {
+                    maxix = i;
+                    maxv = v;
+                }
+            }
+            return maxix;
+        }
+        public static int SampleI(double[] w)
+        {
+            // sample argmax from w, assuming w are 
+            // probabilities that sum to one
+            var r = CN.RandF(0, 1);
+            var x = 0.0;
+            var i = 0;
+            while (true)
+            {
+                x += w[i];
+                if (x > r)
+                {
+                    return i;
+                }
+                i++;
+            }
+            //wtf is this return doing here? idk! perhaps it a javascript thing but i'm leaving it for history
+            return w.Length - 1; // pretty sure we should never get here?
+        }
+        public static void SetConst(double[] arr, double c)
+        {
+            for (var i = 0, n = arr.Length; i < n; i++)
+            {
+                arr[i] = c;
+            }
+        }
+        public static int SampleWeighted(double[] p)
+        {
+            var r = CN.Random();
+            var c = 0.0;
+            for (var i = 0, n = p.Length; i < n; i++)
+            {
+                c += p[i];
+                if (c >= r)
+                {
+                    return i;
+                }
+            }
+            CN.Assert(false, "'wtf'");
+            return 0;
         }
     }
 }

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.329
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TemboRL", "RainForceCore\TemboRL.csproj", "{3BA70F78-3589-4A54-8600-5F063DA03D5F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TemboRL", "TemboRL\TemboRL.csproj", "{3BA70F78-3589-4A54-8600-5F063DA03D5F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
