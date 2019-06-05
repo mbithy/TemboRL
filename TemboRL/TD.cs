@@ -38,7 +38,7 @@ namespace TemboRL
         public void Reset()
         {
             // reset the agent"s policy and value function
-            Q = CN.ArrayOfZeros(NS, NA);
+            Q = CN.ArrayOfZeros(NS* NA);
             if (Options.QInitVal != 0)
             {
                 CN.SetConst(Q, Options.QInitVal);
@@ -49,24 +49,24 @@ namespace TemboRL
             EnvModelS = CN.ArrayOfZeros(NS * NA);
             CN.SetConst(EnvModelS, -1); // init to -1 so we can test if we saw the state before
             EnvModelR = CN.ArrayOfZeros(NS * NA);
-            SaSeen = new int[] { };
+            SaSeen = new double[] { };
             PQ = CN.ArrayOfZeros(NS * NA);
             // initialize uniform random policy
             for (var s = 0; s < NS; s++)
             {
                 var poss = AllowedActions(s);
-                for (var i = 0, n = poss.Length; i < n; i++)
+                for (var i = 0;i<poss.Length; i++)
                 {
                     P[poss[i] * NS + s] = 1.0 / poss.Length;
                 }
             }
             // agent memory, needed for streaming updates
             // (s0,a0,r0,s1,a1,r1,...)
-            r0 = null;
-            s0 = null;
-            s1 = null;
-            a0 = null;
-            a1 = null;
+            r0 = 999999999;
+            s0 = 999999999;
+            s1 = 999999999;
+            a0 = 999999999;
+            a1 = 999999999;
         }
         public void ResetEpisode()
         {
@@ -74,7 +74,7 @@ namespace TemboRL
         }
         protected int[] AllowedActions(int s)
         {
-
+            return new int[] { };
         }
         public int Act(int s)
         {
@@ -82,14 +82,14 @@ namespace TemboRL
             var a = 0;
             var poss = AllowedActions(s);
             var probs = new List<double>();
-            for (var i = 0, n = poss.Length; i < n; i++)
+            for (var i = 0;i<poss.Length; i++)
             {
                 probs.Add(P[poss[i] * NS + s]);
             }
             // epsilon greedy policy
-            if (Math.random() < Epsilon)
+            if (CN.Random() < Options.Epsilon)
             {
-                var a = poss[CN.RandI(0, poss.Length)]; // random available action
+                a = int.Parse(poss[int.Parse(CN.RandI(0, poss.Length).ToString())].ToString()); // random available action
                 Explored = true;
             }
             else
@@ -107,10 +107,10 @@ namespace TemboRL
         public void Learn(int r1)
         {
             // takes reward for previous action, which came from a call to act()
-            if (!(this.r0 == null))
+            if (!(r0 == 999999999))
             {
-                learnFromTuple(s0, a0, r0, s1, a1, Options.Lambda);
-                if (PlanN > 0)
+                LearnFromTuple(s0, a0, r0, s1, a1, Options.Lambda);
+                if (Options.PlanN > 0)
                 {
                     UpdateModel(s0, a0, r0, s1);
                     Plan();
@@ -134,26 +134,26 @@ namespace TemboRL
         public void Plan()
         {
             // order the states based on current priority queue information
-            var spq = new dynamic[] { };
-            for (var i = 0, n = SaSeen.Length; i < n; i++)
+            var spq = new List<dynamic>();
+            for (var i = 0; i < SaSeen.Length; i++)
             {
-                var sa = SaSeen[i];
+                var sa = SaSeen[i].ToInt();
                 var sap = PQ[sa];
                 if (sap > 1e-5)
                 { // gain a bit of efficiency
                     dynamic dy = new ExpandoObject();
                     dy.sa = sa;
                     dy.p = sap;
-                    spq.Append(dy);
+                    spq.Add(dy);
                 }
             }
-            var spqSorted = spq.OrderByDescending(a => a0.p).ToArray();
+            var spqSorted = spq.OrderByDescending(a => a.p).ToList();
             spq = spqSorted;
             /*spq.sort(function (a, b) {
                 return a.p < b.p ? 1 : -1
             });*/
             // perform the updates
-            var nsteps = Math.Min(PlanN, spq.Length);
+            var nsteps = Math.Min(Options.PlanN, spq.Count);
             for (var k = 0; k < nsteps; k++)
             {
                 // random exploration
@@ -164,19 +164,19 @@ namespace TemboRL
                 var s0 = s0a0 % NS;
                 var a0 = Math.Floor(s0a0 / NS);
                 var r0 = EnvModelR[s0a0];
-                var s1 = EnvModelS[s0a0];
+                var s1 = EnvModelS[s0a0].ToInt();
                 var a1 = -1; // not used for Q learning
                 if (Options.Update == "sarsa")
                 {
                     // generate random action?...
                     var poss = AllowedActions(s1);
-                    var a1 = poss[CN.RandI(0, poss.Length)];
+                    a1 = poss[CN.RandI(0, poss.Length).ToInt()];
                 }
                 LearnFromTuple(s0, a0, r0, s1, a1, 0); // note Options.Lambda = 0 - shouldnt use eligibility trace here
             }
         }
 
-        public void LearnFromTuple(int s0, int a0, int r0, int s1, int a1, int lambda)
+        public void LearnFromTuple(int s0, int a0, double r0, int s1, int a1, int lambda)
         {
             var sa = a0 * NS + s0;
             var target = 0.0;
@@ -185,8 +185,8 @@ namespace TemboRL
             {
                 // Q learning target is Q(s0,a0) = r0 + gamma * max_a Q[s1,a]
                 var poss = AllowedActions(s1);
-                var qmax = 0;
-                for (var i = 0, n = poss.Length; i < n; i++)
+                var qmax = 0.0;
+                for (var i = 0;i<poss.Length; i++)
                 {
                     var s1a = poss[i] * NS + s1;
                     var qval = Q[s1a];
@@ -245,7 +245,7 @@ namespace TemboRL
                 if (Explored && Options.Update == "qlearn")
                 {
                     // have to wipe the trace since q learning is off-policy :(
-                    E = zeros(NS * NA);
+                    E = CN.ArrayOfZeros(NS * NA);
                 }
             }
             else
@@ -270,7 +270,7 @@ namespace TemboRL
             {
                 return;
             } // for efficiency skip small updates
-            if (PlanN == 0)
+            if (Options.PlanN == 0)
             {
                 return;
             } // there is no planning to be done, skip.
@@ -297,9 +297,9 @@ namespace TemboRL
             var poss = AllowedActions(s);
             // set policy at s to be the action that achieves max_a Q(s,a)
             // first find the maxy Q values
-            var qmax, nmax;
+            double qmax = 0;double nmax=0;
             var qs = new double[] { };
-            for (var i = 0, n = poss.length; i < n; i++)
+            for (var i = 0; i < poss.Length; i++)
             {
                 var a = poss[i];
                 var qval = this.Q[a * NS + s];
@@ -316,7 +316,7 @@ namespace TemboRL
             }
             // now update the policy smoothly towards the argmaxy actions
             var psum = 0.0;
-            for (var i = 0, n = poss.Length; i < n; i++)
+            for (var i = 0;i<poss.Length; i++)
             {
                 var a = poss[i];
                 var target = (qs[i] == qmax) ? 1.0 / nmax : 0.0;
@@ -336,7 +336,7 @@ namespace TemboRL
             if (Options.SmoothPolicyUpdate)
             {
                 // renomalize P if we're using smooth policy updates
-                for (var i = 0, n = poss.Length; i < n; i++)
+                for (var i = 0; i < poss.Length; i++)
                 {
                     var a = poss[i];
                     P[a * NS + s] /= psum;
@@ -345,19 +345,17 @@ namespace TemboRL
         }
     }
 
-}
-
-public class AgentOptions
-{
-    public string Update { get; set; }
-    public double Gamma { get; set; }
-    public double Epsilon { get; set; }
-    public double Alpha { get; set; }
-    public bool SmoothPolicyUpdate { get; set; }
-    public double Beta { get; set; }
-    public int Lambda { get; set; }
-    public bool ReplacingTraces { get; set; }
-    public int QInitVal { get; set; }
-    public int PlanN { get; set; }
-}
+    public class AgentOptions
+    {
+        public string Update { get; set; }
+        public double Gamma { get; set; }
+        public double Epsilon { get; set; }
+        public double Alpha { get; set; }
+        public bool SmoothPolicyUpdate { get; set; }
+        public double Beta { get; set; }
+        public int Lambda { get; set; }
+        public bool ReplacingTraces { get; set; }
+        public int QInitVal { get; set; }
+        public int PlanN { get; set; }
+    }
 }

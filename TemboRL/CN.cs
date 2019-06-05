@@ -68,11 +68,16 @@ namespace TemboRL
         {
             return mu + GaussRandom() * std;
         }
-        private static double Random(double minimum = 0, double maximum = 1)
+        public static double Random(double minimum = 0, double maximum = 1)
         {
             Random random = new Random();
             double nextDouble = random.NextDouble();
             return nextDouble * (maximum - minimum) + minimum;
+        }
+
+        public static int ToInt(this double doub)
+        {
+            return int.Parse(doub.ToString());
         }
 
         public static void UpdateMatrix(Matrix m, double alpha)
