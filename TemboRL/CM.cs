@@ -6,10 +6,18 @@ using System.Text;
 
 namespace TemboRL
 {
-    public static class CN
+    public static class CM
     {
         private static bool return_v = false;
         private static double v_val = 0.0f;
+        private static double nextId = 0;
+        private static Graph Graph = new Graph();
+
+        public static double NextId()
+        {
+            nextId += 1;
+            return nextId;
+        }
         public static string GetId()
         {
             return new Guid().ToString();
@@ -21,6 +29,12 @@ namespace TemboRL
                 throw new Exception(message);
             }
         }
+        /*public static double Permuter(double n, double r)
+        {
+            var a=r+n-1!;
+            var b=r!(n-1)!;
+            return a / b;
+        }*/
         public static double[] ArrayOfZeros(this int size)
         {
             var array = new double[size];
@@ -60,9 +74,9 @@ namespace TemboRL
         {
             return Random() * (b - a) + a;
         }
-        public static double RandI(double a, double b)
+        public static int RandomInt(double a, double b)
         {
-            return Math.Floor(Random() * (b - a) + a);
+            return Math.Floor(Random() * (b - a) + a).ToInt();
         }
         public static double RandN(double mu, double std)
         {
@@ -91,6 +105,31 @@ namespace TemboRL
                     m.DW[i] = 0;
                 }
             }
+        }
+
+        public static void UpdateNetwork(Dictionary<string,Matrix>net, double alpha)
+        {
+            foreach(var p in net)
+            {
+                UpdateMatrix(p.Value, alpha);
+            }            
+        }
+
+        public static void NetZeroGrads(KeyValuePair<string, Matrix> net)
+        {
+            GradFillConst(net.Value, 0);
+        }
+
+        public static Matrix NetFlattenGrads(KeyValuePair<string, Matrix> net)
+        {
+            var g = new Matrix(net.Value.DW.Length, 1);
+            var ix = 0;
+            for (var i = 0; i < net.Value.DW.Length; i++)
+            {
+                g.W[ix] = net.Value.DW[i];
+                ix++;
+            }
+            return g;
         }
 
         public static void FillRandom(Matrix m, double mu, double std)
@@ -166,37 +205,37 @@ namespace TemboRL
                 var hiddenSize = hiddenSizes[d];
                 // gates parameters
                 var key = "Wix" + d;
-                var model = new Model(key, CN.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
+                var model = new Model(key, CM.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
                 models.Add(model);
                 key = "Wih" + d;
-                var model2 = new Model(key, CN.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
+                var model2 = new Model(key, CM.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
                 models.Add(model2);
                 key = "bi" + d;
                 var model3 = new Model(key, new Matrix(hiddenSize, 1));
                 models.Add(model3);
                 key = "Wfx" + d;
-                var model4 = new Model(key, CN.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
+                var model4 = new Model(key, CM.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
                 models.Add(model4);
                 key = "Wfh" + d;
-                var model5 = new Model(key, CN.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
+                var model5 = new Model(key, CM.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
                 models.Add(model5);
                 key = "bf" + d;
                 var model6 = new Model(key, new Matrix(hiddenSize, 1));
                 models.Add(model6);
                 key = "Wox" + d;
-                var model7 = new Model(key, CN.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
+                var model7 = new Model(key, CM.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
                 models.Add(model7);
                 key = "Woh" + d;
-                var model8 = new Model(key, CN.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
+                var model8 = new Model(key, CM.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
                 models.Add(model8);
                 key = "bo" + d;
                 var model9 = new Model(key, new Matrix(hiddenSize, 1));
                 models.Add(model9);
                 key = "Wcx" + d;
-                var model10 = new Model(key, CN.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
+                var model10 = new Model(key, CM.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
                 models.Add(model10);
                 key = "Wch" + d;
-                var model11 = new Model(key, CN.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
+                var model11 = new Model(key, CM.RandomMatrix(hiddenSize, prev_size, 0, 0.08));
                 models.Add(model11);
                 key = "bc" + d;
                 var model12 = new Model(key, new Matrix(hiddenSize, 1));
@@ -204,7 +243,7 @@ namespace TemboRL
 
             }
             // decoder params
-            var model13 = new Model("Whd", CN.RandomMatrix(outputSize, hiddenSizes.LastOrDefault(), 0, 0.08));
+            var model13 = new Model("Whd", CM.RandomMatrix(outputSize, hiddenSizes.LastOrDefault(), 0, 0.08));
             models.Add(model13);
             var model14 = new Model("bd", new Matrix(outputSize, 1));
             models.Add(model14);
@@ -298,7 +337,7 @@ namespace TemboRL
             // argmax of array w
             var maxv = w[0];
             var maxix = 0;
-            for (var i = 1, n = w.Length; i < n; i++)
+            for (var i = 1; i < w.Length; i++)
             {
                 var v = w[i];
                 if (v > maxv)
@@ -313,7 +352,7 @@ namespace TemboRL
         {
             // sample argmax from w, assuming w are 
             // probabilities that sum to one
-            var r = CN.RandF(0, 1);
+            var r = CM.RandF(0, 1);
             var x = 0.0;
             var i = 0;
             while (true)
@@ -330,24 +369,30 @@ namespace TemboRL
         }
         public static void SetConst(double[] arr, double c)
         {
-            for (var i = 0, n = arr.Length; i < n; i++)
+            for (var i = 0; i < arr.Length; i++)
             {
                 arr[i] = c;
             }
         }
         public static int SampleWeighted(double[] p)
         {
-            var r = CN.Random();
+            var r = CM.Random();
             var c = 0.0;
-            for (var i = 0, n = p.Length; i < n; i++)
+            for (var i = 0; i < p.Length; i++)
             {
                 c += p[i];
                 if (c >= r)
                 {
                     return i;
                 }
+                //when update mode is sarsa wtf is reached
+                //so just retun the largest
+                if(c<=r && i >= p.Length - 1)
+                {
+                    return i;
+                }
             }
-            CN.Assert(false, "'wtf'");
+            CM.Assert(false, "'wtf'");
             return 0;
         }
     }

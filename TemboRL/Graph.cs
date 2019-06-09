@@ -6,10 +6,20 @@ namespace TemboRL
 {
     public class Graph
     {
-        public static bool NeedsBackPropagation = true;
-        private static List<Action> BackProp = new List<Action>();
+        private bool NeedsBackPropagation = true;
+        private List<Action> BackProp = new List<Action>();
 
-        public static void Backward()
+
+        public Graph(bool needsBackProp)
+        {
+            NeedsBackPropagation = needsBackProp;
+        }
+        public Graph()
+        {
+            NeedsBackPropagation = true;
+        }
+
+        public void Backward()
         {
             for (var i = BackProp.Count - 1; i >= 0; i--)
             {
@@ -17,9 +27,9 @@ namespace TemboRL
             }
         }
 
-        public static Matrix RowPluck(Matrix m, int ix)
+        public Matrix RowPluck(Matrix m, int ix)
         {
-            CN.Assert(ix >= 0 && ix < m.Rows);
+            CM.Assert(ix >= 0 && ix < m.Rows);
             var d = m.Columns;
             var output = new Matrix(d, 1);
             for (var i = 0; i < d; i++)
@@ -39,7 +49,7 @@ namespace TemboRL
             return output;
         }
 
-        public static Matrix Tanh(Matrix m)
+        public Matrix Tanh(Matrix m)
         {
             // tanh nonlinearity
             var output = new Matrix(m.Rows, m.Columns);
@@ -64,14 +74,14 @@ namespace TemboRL
             return output;
         }
 
-        public static Matrix Sigmoid(Matrix m)
+        public Matrix Sigmoid(Matrix m)
         {
             // sigmoid nonlinearity
             var output = new Matrix(m.Rows, m.Columns);
             var n = m.W.Length;
             for (var i = 0; i < n; i++)
             {
-				output.W[i] = CN.Sig(m.W[i]);
+				output.W[i] = CM.Sig(m.W[i]);
             }
             if (NeedsBackPropagation)
             {
@@ -89,7 +99,7 @@ namespace TemboRL
             return output;
         }
 
-        public static Matrix Relu(Matrix m)
+        public Matrix Relu(Matrix m)
         {
             var output = new Matrix(m.Rows, m.Columns);
             var n = m.W.Length;
@@ -110,9 +120,9 @@ namespace TemboRL
             }
             return output;
         }
-        public static Matrix Multiply(Matrix m1, Matrix m2)
+        public Matrix Multiply(Matrix m1, Matrix m2)
         {
-            CN.Assert(m1.Columns == m2.Rows, "matrix multiplier dimensions misaligned");
+            CM.Assert(m1.Columns == m2.Rows, "matrix multiplier dimensions misaligned");
             var n = m1.Rows;
             var d = m2.Columns;
             var output = new Matrix(n, d);
@@ -150,9 +160,9 @@ namespace TemboRL
             return output;
         }
 
-        public static Matrix Add(Matrix m1, Matrix m2)
+        public Matrix Add(Matrix m1, Matrix m2)
         {
-            CN.Assert(m1.W.Length == m2.W.Length);
+            CM.Assert(m1.W.Length == m2.W.Length);
             var output = new Matrix(m1.Rows, m1.Columns);
             for (var i = 0; i < m1.W.Length; i++)
             {
@@ -172,9 +182,9 @@ namespace TemboRL
             return output;
         }
 
-        public static Matrix Dot(Matrix m1, Matrix m2)
+        public Matrix Dot(Matrix m1, Matrix m2)
         {
-            CN.Assert(m1.W.Length == m2.W.Length);
+            CM.Assert(m1.W.Length == m2.W.Length);
             var output = new Matrix(1, 1);
             var dot = 0.0;
             for (var i = 0; i < m1.W.Length; i++)
@@ -198,9 +208,9 @@ namespace TemboRL
             return output;
         }
 
-        public static Matrix Eltmul(Matrix m1, Matrix m2)
+        public Matrix Eltmul(Matrix m1, Matrix m2)
         {
-            CN.Assert(m1.W.Length == m2.W.Length);
+            CM.Assert(m1.W.Length == m2.W.Length);
             var output = new Matrix(m1.Rows, m1.Columns);
             for (var i = 0; i < m1.W.Length; i++)
             {

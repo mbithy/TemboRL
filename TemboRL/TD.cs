@@ -6,14 +6,14 @@ using System.Text;
 
 namespace TemboRL
 {
-    public class TD
+    public abstract class TD
     {
         // QAgent uses TD (Q-Learning, SARSA)
         // - does not require environment model :)
         // - learns from experience :)
-        public AgentOptions Options { get; private set; }
-        public int NS { get; private set; }
-        public int NA { get; private set; }
+        public AgentOptions Options { get; set; }
+        public int NS { get; set; }
+        public int NA { get;set; }
         public double[] P { get; set; }
         public double[] E { get; set; }
         public double[] Q { get; set; }
@@ -21,8 +21,9 @@ namespace TemboRL
         public double[] EnvModelR { get; set; }
         private double[] SaSeen { get; set; }
         private double[] PQ { get; set; }
+        //public int [] AllowedActions { get; set; }
         private bool Explored { get; set; }
-        private int r0;
+        private double r0;
         private int s0;
         private int s1;
         private int a0;
@@ -32,25 +33,26 @@ namespace TemboRL
             NS = ns;
             NA = na;
             Options = options;
+            //AllowedActions = allowedActions;
             Reset();
         }
 
-        public void Reset()
+        protected void Reset()
         {
             // reset the agent"s policy and value function
-            Q = CN.ArrayOfZeros(NS* NA);
+            Q = CM.ArrayOfZeros(NS* NA);
             if (Options.QInitVal != 0)
             {
-                CN.SetConst(Q, Options.QInitVal);
+                CM.SetConst(Q, Options.QInitVal);
             }
-            P = CN.ArrayOfZeros(NS * NA);
-            E = CN.ArrayOfZeros(NS * NA);
+            P = CM.ArrayOfZeros(NS * NA);
+            E = CM.ArrayOfZeros(NS * NA);
             // model/planning vars
-            EnvModelS = CN.ArrayOfZeros(NS * NA);
-            CN.SetConst(EnvModelS, -1); // init to -1 so we can test if we saw the state before
-            EnvModelR = CN.ArrayOfZeros(NS * NA);
+            EnvModelS = CM.ArrayOfZeros(NS * NA);
+            CM.SetConst(EnvModelS, -1); // init to -1 so we can test if we saw the state before
+            EnvModelR = CM.ArrayOfZeros(NS * NA);
             SaSeen = new double[] { };
-            PQ = CN.ArrayOfZeros(NS * NA);
+            PQ = CM.ArrayOfZeros(NS * NA);
             // initialize uniform random policy
             for (var s = 0; s < NS; s++)
             {
@@ -68,13 +70,19 @@ namespace TemboRL
             a0 = 999999999;
             a1 = 999999999;
         }
-        public void ResetEpisode()
+        private void ResetEpisode()
         {
             //773
         }
-        protected int[] AllowedActions(int s)
+        public virtual int[] AllowedActions(int s)
         {
-            return new int[] { };
+            //default 0-buy, 1-sell
+            return new int[] { 0,1};
+        }
+        public virtual int[] AllowedActions(double[] s)
+        {
+            //default 0-buy, 1-sell
+            return new int[] { 0, 1 };
         }
         public int Act(int s)
         {
@@ -87,14 +95,14 @@ namespace TemboRL
                 probs.Add(P[poss[i] * NS + s]);
             }
             // epsilon greedy policy
-            if (CN.Random() < Options.Epsilon)
+            if (CM.Random() < Options.Epsilon)
             {
-                a = int.Parse(poss[int.Parse(CN.RandI(0, poss.Length).ToString())].ToString()); // random available action
+                a = poss[CM.RandomInt(0, poss.Length)]; // random available action
                 Explored = true;
             }
             else
             {
-                a = poss[CN.SampleWeighted(probs.ToArray())];
+                a = poss[CM.SampleWeighted(probs.ToArray())];
                 Explored = false;
             }
             // shift state memory
@@ -104,12 +112,53 @@ namespace TemboRL
             a1 = a;
             return a;
         }
-        public void Learn(int r1)
+        public int Act(double[] state)
+        {
+            var s = StateKey(state);
+            // act according to epsilon greedy policy
+            var a = 0;
+            var poss = AllowedActions(state);
+            var probs = new List<double>();
+            for (var i = 0; i < poss.Length; i++)
+            {
+                probs.Add(P[poss[i] * NS + s]);
+            }
+            // epsilon greedy policy
+            if (CM.Random() < Options.Epsilon)
+            {
+                a = poss[CM.RandomInt(0, poss.Length)]; // random available action
+                Explored = true;
+            }
+            else
+            {
+                a = poss[CM.SampleWeighted(probs.ToArray())];
+                Explored = false;
+            }
+            // shift state memory
+            s0 = s1;
+            a0 = a1;
+            s1 = s;
+            a1 = a;
+            return a;
+        }
+        public virtual int StateKey(double[] positionFeature)
+        {
+            return 0;
+        }
+        public void Learn(double r1)
         {
             // takes reward for previous action, which came from a call to act()
             if (!(r0 == 999999999))
             {
-                LearnFromTuple(s0, a0, r0, s1, a1, Options.Lambda);
+                var exp = new Experience
+                {
+                    PreviousStateInt = s0,
+                    PreviousAction = a0,
+                    PreviousReward = r0,
+                    CurrentStateInt = s1,
+                    CurrentAction = a1
+                };
+                LearnFromTuple(/*s0, a0, r0, s1, a1*/exp, Options.Lambda);
                 if (Options.PlanN > 0)
                 {
                     UpdateModel(s0, a0, r0, s1);
@@ -118,20 +167,20 @@ namespace TemboRL
             }
             r0 = r1; // store this for next update
         }
-        public void UpdateModel(int s0, int a0, int r0, int s1)
+        private void UpdateModel(int state0, int action0, double reward0, int state1)
         {
             // transition (s0,a0) -> (r0,s1) was observed. Update environment model
-            var sa = a0 * NS + s0;
+            var sa = action0 * NS + state0;
             if (EnvModelS[sa] == -1)
             {
                 // first time we see this state action
-                SaSeen.Append(a0 * NS + s0); // add as seen state
+                SaSeen.Append(action0 * NS + state0); // add as seen state
             }
-            EnvModelS[sa] = s1;
-            EnvModelR[sa] = r0;
+            EnvModelS[sa] = state1;
+            EnvModelR[sa] = reward0;
         }
 
-        public void Plan()
+        private void Plan()
         {
             // order the states based on current priority queue information
             var spq = new List<dynamic>();
@@ -170,38 +219,46 @@ namespace TemboRL
                 {
                     // generate random action?...
                     var poss = AllowedActions(s1);
-                    a1 = poss[CN.RandI(0, poss.Length).ToInt()];
+                    a1 = poss[CM.RandomInt(0, poss.Length)];
                 }
-                LearnFromTuple(s0, a0, r0, s1, a1, 0); // note Options.Lambda = 0 - shouldnt use eligibility trace here
+                var exp = new Experience
+                {
+                    PreviousStateInt = s0,
+                    PreviousAction = a0,
+                    PreviousReward = r0,
+                    CurrentStateInt = s1,
+                    CurrentAction = a1
+                };
+                LearnFromTuple(exp, 0); // note Options.Lambda = 0 - shouldnt use eligibility trace here
             }
         }
 
-        public void LearnFromTuple(int s0, int a0, double r0, int s1, int a1, int lambda)
+        private void LearnFromTuple(Experience exp/*int s0, int a0, double r0, int s1, int a1*/, int lambda)
         {
-            var sa = a0 * NS + s0;
+            var sa =exp.PreviousAction * NS + exp.PreviousStateInt;
             var target = 0.0;
             // calculate the target for Q(s,a)
             if (Options.Update == "qlearn")
             {
                 // Q learning target is Q(s0,a0) = r0 + gamma * max_a Q[s1,a]
-                var poss = AllowedActions(s1);
+                var poss =  AllowedActions(exp.CurrentStateInt);
                 var qmax = 0.0;
                 for (var i = 0;i<poss.Length; i++)
                 {
-                    var s1a = poss[i] * NS + s1;
+                    var s1a = poss[i] * NS + exp.CurrentStateInt;
                     var qval = Q[s1a];
                     if (i == 0 || qval > qmax)
                     {
                         qmax = qval;
                     }
                 }
-                target = r0 + Options.Gamma * qmax;
+                target = exp.PreviousReward + Options.Gamma * qmax;
             }
             else if (Options.Update == "sarsa")
             {
                 // SARSA target is Q(s0,a0) = r0 + gamma * Q[s1,a1]
-                var s1a1 = a1 * NS + s1;
-                target = r0 + Options.Gamma * Q[s1a1];
+                var s1a1 =exp.CurrentAction * NS + exp.CurrentStateInt;
+                target = exp.PreviousReward + Options.Gamma * Q[s1a1];
             }
             if (lambda > 0)
             {
@@ -215,7 +272,7 @@ namespace TemboRL
                     E[sa] += 1;
                 }
                 var edecay = lambda * Options.Gamma;
-                var state_update = CN.ArrayOfZeros(NS);
+                var state_update = CM.ArrayOfZeros(NS);
                 for (var s = 0; s < NS; s++)
                 {
                     var poss = AllowedActions(s);
@@ -245,7 +302,7 @@ namespace TemboRL
                 if (Explored && Options.Update == "qlearn")
                 {
                     // have to wipe the trace since q learning is off-policy :(
-                    E = CN.ArrayOfZeros(NS * NA);
+                    E = CM.ArrayOfZeros(NS * NA);
                 }
             }
             else
@@ -254,13 +311,13 @@ namespace TemboRL
                 // update Q[sa] towards it with some step size
                 var update = Options.Alpha * (target - Q[sa]);
                 Q[sa] += update;
-                UpdatePriority(s0, a0, update);
+                UpdatePriority(exp.PreviousStateInt, exp.PreviousAction, update);
                 // update the policy to reflect the change (if appropriate)
-                UpdatePolicy(s0);
+                UpdatePolicy(exp.PreviousStateInt);
             }
         }
 
-        public void UpdatePriority(int s, int a, double u)
+        private void UpdatePriority(int s, int a, double u)
         {
             // used in planning. Invoked when Q[sa] += update
             // we should find all states that lead to (s,a) and upgrade their priority
@@ -292,13 +349,13 @@ namespace TemboRL
             }
         }
 
-        public void UpdatePolicy(int s)
+        private void UpdatePolicy(int s)
         {
             var poss = AllowedActions(s);
             // set policy at s to be the action that achieves max_a Q(s,a)
             // first find the maxy Q values
             double qmax = 0;double nmax=0;
-            var qs = new double[] { };
+            var qs = new double[poss.Length];
             for (var i = 0; i < poss.Length; i++)
             {
                 var a = poss[i];
@@ -343,19 +400,5 @@ namespace TemboRL
                 }
             }
         }
-    }
-
-    public class AgentOptions
-    {
-        public string Update { get; set; }
-        public double Gamma { get; set; }
-        public double Epsilon { get; set; }
-        public double Alpha { get; set; }
-        public bool SmoothPolicyUpdate { get; set; }
-        public double Beta { get; set; }
-        public int Lambda { get; set; }
-        public bool ReplacingTraces { get; set; }
-        public int QInitVal { get; set; }
-        public int PlanN { get; set; }
     }
 }

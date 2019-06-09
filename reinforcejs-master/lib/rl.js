@@ -164,7 +164,14 @@ var R = {}; // the Recurrent library
   }
   var netFlattenGrads = function(net) {
     var n = 0;
-    for(var p in net) { if(net.hasOwnProperty(p)){ var mat = net[p]; n += mat.dw.length; } }
+    for(var p in net) 
+    { 
+      if(net.hasOwnProperty(p))
+      { 
+        var mat = net[p];
+         n += mat.dw.length; 
+      } 
+    }
     var g = new Mat(n, 1);
     var ix = 0;
     for(var p in net) {

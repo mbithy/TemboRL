@@ -23,7 +23,7 @@ namespace TemboRL
                 {
                     var m = k.Value;
 
-                    if (!CN.Contains(StepCache, k))
+                    if (!CM.Contains(StepCache, k))
                     {
                         StepCache.Add(new Model(k.Key, new Matrix(k.Value.Rows, k.Value.Columns)));
                     }

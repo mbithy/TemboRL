@@ -9,7 +9,7 @@ namespace TemboRL
         /// <summary>
         /// N
         /// </summary>
-        public int Rows { get; set; }
+        public int Rows { get; }
         /// <summary>
         /// D
         /// </summary>
@@ -19,29 +19,30 @@ namespace TemboRL
         public string Id { get; private set; }
         public Matrix(int numberOfRows, int numberOfColumns, string id="")
         {
-            Rows = Rows;
+            Rows = numberOfRows;
             Columns = numberOfColumns;
-            W = CN.ArrayOfZeros(Rows * numberOfColumns);
-            DW= CN.ArrayOfZeros(Rows * numberOfColumns);
+            W = CM.ArrayOfZeros(Rows * numberOfColumns);
+            DW= CM.ArrayOfZeros(Rows * numberOfColumns);
             Id = id != "" ? id : new Guid().ToString();
         }
 
         public double Get(int row, int col)
         {
             var ix = (Columns * row) + col;
-            CN.Assert(ix >= 0 && ix < W.Length);
+            CM.Assert(ix >= 0 && ix < W.Length);
             return W[ix];
         }
 
         public void Set(int row, int col, double value)
         {
             var ix = (Columns * row) + col;
-            CN.Assert(ix >= 0 && ix < W.Length);
+            CM.Assert(ix >= 0 && ix < W.Length);
             W[ix] = value;
         }
 
         public void Set(double[] arr)
         {
+            //W = new double[arr.Length];
             for (var i = 0; i < arr.Length; i++)
             {
                 W[i] = arr[i];
