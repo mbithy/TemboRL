@@ -1,4 +1,4 @@
-﻿namespace TemboRL
+﻿namespace TemboRL.Models
 {
     public class AgentOptions
     {
@@ -20,5 +20,6 @@
         public int LearningSteps { get; set; }
         public double ErrorClamp { get; set; }
         public int HiddenUnits { get; set; }
+        public bool AdaptiveLearningSteps { get; set; }
     }
 }

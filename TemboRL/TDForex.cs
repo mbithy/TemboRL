@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-
+using TemboRL.Agent;
+using TemboRL.Models;
 namespace TemboRL
 {
     public class TDForexE : TD
     {
         //a collection of known states learned from the environment
-        public Dictionary<int, int[]> KnownStates { get; set; }
+        public Dictionary<int, int[]> KnownStates { get; set; } //if your states exceed 2BN switch to doubles
         private List<double[]> Cache = new List<double[]>();
         public double CacheSize = 200;
         public TDForexE(int ns, int na, AgentOptions options) : base(ns, na, options)
@@ -38,7 +38,6 @@ namespace TemboRL
             //whole buffet
             return new int[] { 0, 1,2 };
         }
-
         private void AddState(KeyValuePair<int, int[]> vps)
         {
             if (!StateExists(vps.Value))
@@ -56,13 +55,11 @@ namespace TemboRL
             }
             AddState(PositionFeatureToState(positionFeature));
         }
-
         private KeyValuePair<int, int[]> PositionFeatureToState(double[] positionFeature)
         {
             var state = new int[8];
             state[0] = positionFeature[0].ToInt();
-            state[1] = positionFeature[1] >= 30 ? 1 : 0;
-            //state[2] = positionFeature[2].ToInt();            
+            state[1] = positionFeature[1] >= 30 ? 1 : 0;          
             var avg = Cache.Average(d => d[2]);
             state[2] = positionFeature[2] >= avg ? 1 : 0;
             state[3] = positionFeature[3].ToInt();
@@ -72,7 +69,6 @@ namespace TemboRL
             var fg = new KeyValuePair<int, int[]>((KnownStates.Count + 1), state);
             return fg;
         }
-
         public int SState(KeyValuePair<int, int[]> vps)
         {
             foreach (var x in KnownStates)
@@ -100,7 +96,6 @@ namespace TemboRL
             }
             return false;
         }
-
         private bool ValuesEqual(double[] a, double[] b)
         {
             var max = Math.Min(a.Length, b.Length);

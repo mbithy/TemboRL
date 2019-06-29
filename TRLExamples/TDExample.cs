@@ -3,6 +3,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using TemboRL;
+using TemboRL.Agent;
+using TemboRL.Models;
 
 namespace TRLExamples
 {
@@ -20,6 +22,7 @@ namespace TRLExamples
         }
         protected new int[] AllowedActions(int s)
         {
+            //0 buy 1 sell
             return new int[] {0,1 };
         }
 

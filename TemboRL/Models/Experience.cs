@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace TemboRL
+﻿namespace TemboRL.Models
 {
+    /// <summary>
+    /// better than params :)
+    /// </summary>
     public class Experience
     {
         public Matrix PreviousState { get; set; }
