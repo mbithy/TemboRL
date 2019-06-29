@@ -3,7 +3,7 @@ Dynamic agents for forex and BO markets
 
 Dive in like
 
-```
+```C#
             var options = new AgentOptions
             {
                 Gamma = 0.8,
@@ -35,4 +35,4 @@ Dive in like
                 //on loss
                 temboDQN.Reward(-0.05);
             }
-`
+```
