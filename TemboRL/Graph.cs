@@ -159,7 +159,7 @@ namespace TemboRL
         }
         public Matrix Add(Matrix m1, Matrix m2)
         {
-            Tembo.Assert(m1.W.Length == m2.W.Length);
+            Tembo.Assert(m1.W.Length == m2.W.Length, "matrix addition dimensions misaligned");
             var output = new Matrix(m1.Rows, m1.Columns);
             for (var i = 0; i < m1.W.Length; i++)
             {

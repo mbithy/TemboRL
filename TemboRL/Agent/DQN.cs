@@ -44,7 +44,7 @@ namespace TemboRL.Agent
         /// <returns></returns>
         public int Act(double[] state)
         {
-            Tembo.Assert(state.Length == NumberOfStates);
+            Tembo.Assert(state.Length == NumberOfStates,$"Current state({state.Length}) not equal to NS({NumberOfStates})");
             var a = 0;
             // convert to a Mat column vector
             var s = new Matrix(NumberOfStates, 1);

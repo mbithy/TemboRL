@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using TemboRL.Models;
 namespace TemboRL
@@ -118,10 +119,13 @@ namespace TemboRL
             double nextDouble = random.NextDouble();
             return nextDouble * (maximum - minimum) + minimum;
         }
-        public static int ToInt(this double doub)
-        {
-            return int.Parse(doub.ToString());
-        }
+        /// <summary>
+        /// Converts a double to Int
+        /// </summary>
+        /// <param name="doub"></param>
+        /// <returns></returns>
+        public static int ToInt(this double doub) => int.Parse(doub.ToString(CultureInfo.InvariantCulture).Split('.')[0]);
+
         public static void UpdateMatrix(Matrix m, double alpha)
         {
             var n = m.Rows * m.Columns;
